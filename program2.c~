@@ -1,0 +1,475 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#define MAX_LINE_LEN 1024
+#define MAX_STR_LEN  69
+#define MAX_PROFILES 10000
+
+void parse_line(char *);
+
+ struct date {
+   int y;
+   int m;
+   int d;
+ };
+ 
+ struct profile {
+   int         id;
+   char        name[MAX_STR_LEN+1];
+   struct date birthday;
+   char        home[MAX_STR_LEN+1];
+   char        *comment;
+ };
+
+struct profile profile_data_store[MAX_PROFILES];
+int profile_data_nitems=0; 
+int number;
+FILE *fp;
+struct profile another[MAX_PROFILES];
+
+ int subst(char *str, char c1, char c2)
+ {
+   int n = 0;
+ 
+   while (*str) {
+     if (*str == c1) {
+       *str = c2;
+       n++;
+    }
+     str++;
+   }
+   return n;
+ }
+
+ int split(char *str, char *ret[], char sep, int max)
+ {
+   int n = 0;
+   ret[n++] = str; 
+   while (*str && n < max) {
+     if (*str == sep){
+      *str = '\0';
+      if(*(str+1) != sep){
+       ret[n++] = str + 1;
+      }
+     }
+     str++;
+   }
+  return n;
+ }
+
+int get_line(FILE *fp,char *line)
+ {
+   if (fgets(line, MAX_LINE_LEN + 1, fp) == NULL){
+     return 0;
+ } else{
+   subst(line, '\n', '\0');
+   return 1;
+   }
+ }
+
+struct date *new_date(struct date *d, char *str)
+  {
+   char *ptr[3];
+ 
+   if (split(str, ptr, '-', 3) != 3){
+     return NULL;
+   } else{
+   d->y = atoi(ptr[0]);
+   d->m = atoi(ptr[1]);
+   d->d = atoi(ptr[2]);
+   return d;
+   }
+ }
+
+ struct profile *new_profile(struct profile *p, char *csv)
+ {
+   char *qtr[5];
+ 
+   if (split(csv, qtr, ',', 5) != 5) 
+     return NULL; 
+
+   p->id = atoi(qtr[0]); 
+
+    strncpy(p->name, qtr[1], MAX_STR_LEN); 
+    p->name[MAX_STR_LEN] = '\0';
+
+   if (new_date(&p->birthday, qtr[2]) == NULL) 
+     return NULL; 
+ 
+   strncpy(p->home, qtr[3], MAX_STR_LEN);  
+   p->home[MAX_STR_LEN] = '\0';
+
+   p->comment = (char *)malloc(sizeof(char) * (strlen(qtr[4])+1));
+   strcpy(p->comment, qtr[4]);   
+   return p;          
+ }
+
+void cmd_quit()
+{
+  exit(0);
+}
+
+
+void cmd_check()
+{
+  printf("%d profile(s)\n",profile_data_nitems);
+}
+
+
+char *date_string(char buf[],struct date *date)
+{
+  sprintf(buf,"%04d-%02d-%02d",date->y,date->m,date->d);
+  return buf;
+}
+
+void print_profile(struct profile *p)
+{
+  char date[20];
+  printf("ID    : %d\n",p->id);
+  printf("Name  : %s\n", p->name);
+  printf("Birth : %s\n", date_string(date, &p->birthday));
+  printf("Addr  : %s\n", p->home);
+  printf("Com.  : %s\n", p->comment);
+}
+
+void cmd_print(int nitems)
+{
+  int i, start = 0,end = profile_data_nitems;
+  if (nitems > 0) {
+    if(nitems < profile_data_nitems) end = nitems;
+  }
+  else if (nitems < 0) {
+    if(end + nitems > start) start = end + nitems ;
+  }
+  for (i = start; i < end; i++) {
+    print_profile(&profile_data_store[i]);
+    printf("\n");
+  }
+}
+
+
+void cmd_read(char *filename)
+{
+  int l;
+  char line[MAX_LINE_LEN + 1];
+  if((fp = fopen(filename,"r")) == NULL){
+    fprintf(stderr, "%%R: file open error %s.\n", filename);
+    return;
+    }
+   number=profile_data_nitems;
+  for(l=0; l<=number-1; l++){
+    another[l] = profile_data_store[l];
+  }
+  while(get_line(fp,line)){
+    parse_line(line);
+  }
+  fclose(fp); 
+}
+
+void fprint_profile_csv(FILE *fp,struct profile *p)
+{
+  char date[20];
+  fprintf(fp,"%d,%s,%s,%s,%s\n",p->id,p->name,date_string(date,&p->birthday),p->home,p->comment);
+}
+
+void cmd_write(char *filename)
+{
+  int i,l;
+  if((fp = fopen(filename,"w")) == NULL){
+      fprintf(stderr,"error");
+    }
+  number=profile_data_nitems;
+  for(i=0; i<=number-1; i++){
+    another[i] = profile_data_store[i];
+  }
+
+  for (i = 0; i < profile_data_nitems; i++) {
+    fprint_profile_csv(fp,&profile_data_store[i]);
+  }
+  fclose(fp);
+}
+
+
+int strcmp_word(struct profile *p,char *word)
+{
+  char id[20];
+  char date[20];
+ sprintf(id,"%d",p->id);
+ 
+ if(strcmp(id, word) == 0||strcmp(p->name, word) == 0||strcmp(date_string(date, &p->birthday), word) == 0||strcmp(p->home, word) == 0||strcmp(p->comment, word) == 0){
+     /*
+ if(strstr(id, word) == 0||strstr(p->name, word) == 0||strstr(date_string(date, &p->birthday), word) == 0||strstr(p->home, word) == 0||strstr(p->comment, word) == 0){
+     */
+   return 0;
+ } 
+}
+
+void cmd_find(char *word)
+{
+  int i,times=0;
+  struct profile *p;
+
+  for (i=0; i < profile_data_nitems; i++) {
+    p=&profile_data_store[i];
+    if(strcmp_word(p,word)==0){ 
+      print_profile(p);
+      printf("\n");
+      times++;
+    }
+  }
+  if(times == 0){
+    printf("data which have %s :ignored.\n",word);
+  }
+}
+
+
+void swap(struct profile *p1, struct profile *p2)
+{
+  struct profile tmp;
+
+  tmp = *p1;
+  *p1 = *p2;
+  *p2 = tmp;
+}
+
+int compare_date(struct date *d1, struct date *d2)
+{
+  if (d1->y != d2->y) return (d1->y) - (d2->y);
+  if (d1->m != d2->m) return (d1->m) - (d2->m);
+  return (d1->d) - (d2->d);
+}
+
+int compare_profile(struct profile *p1, struct profile *p2, int column)
+{
+  switch (column) {
+    case 1:
+      return p1->id - p2->id; break; 
+    case 2:
+      return strcmp(p1->name,p2->name); break;  
+    case 3:
+      return compare_date(&p1->birthday,&p2->birthday); break;  
+    case 4:
+      return strcmp(p1->home,p2->home); break;  
+    case 5:
+      return strcmp(p1->comment,p2->comment); break; 
+    }
+}
+
+void cmd_sort(int column)
+{
+  int length =profile_data_nitems;
+  int i,j,l,s;
+  struct profile *p;
+  s = length-1;
+  if(column != 1 && column != 2 &&column !=3 && column != 4 && column !=5 ){
+    fprintf(stderr, "Invalid number %d: ignored.\n", column);
+  }
+  number=profile_data_nitems;
+  for(l=0; l<=number-1; l++){
+    another[l] = profile_data_store[l];
+  }
+  for(i = 0; i <= s; i++) {
+    for (j = 0; j <= s - 1; j++) {
+      p=&profile_data_store[j];
+      if (compare_profile(p, (p+1), column) > 0)
+        swap(p, (p+1));  
+    }
+  }
+}
+
+
+void cmd_delete(int nitems)
+{
+  int i, l, end = profile_data_nitems-1;
+  if(nitems < 0 || nitems > end+1){
+    printf("ERROR\n");
+  }
+  number=profile_data_nitems;
+  for(l=0; l<=number-1; l++){
+    another[l] = profile_data_store[l];
+  }
+  if(nitems > 0 && nitems < end+1){
+    for(i=nitems-1;i<end;i++){
+      profile_data_store[i]=profile_data_store[i+1];  
+    }
+    profile_data_nitems--;
+  }
+  else if(nitems == end+1){
+    profile_data_nitems--;
+  }
+  else if(nitems == 0 ){
+    printf("ALL DELETE\n");
+    profile_data_nitems=0;
+  }
+}
+
+
+void cmd_vanish(char *word)
+{
+  int i,k,l,times=0;
+  char date[20];
+  char id[20];
+  struct profile *p;
+for (i=0; i < profile_data_nitems; i++) {
+    p=&profile_data_store[i];
+    if(strcmp_word(p,word)==0){
+      times++;
+    }
+ }
+ if(times==0){
+   printf("NOT EXIST!\n");
+ }
+  number=profile_data_nitems;
+  for(l=0; l<=number-1; l++){
+    another[l] = profile_data_store[l];
+  }
+  for (i=0; i < profile_data_nitems; i++) {
+    p=&profile_data_store[i];
+    if(strcmp_word(p,word)==0){
+      for(k=i;k<profile_data_nitems-1;k++){
+	profile_data_store[k]=profile_data_store[k+1];  
+      }
+      profile_data_nitems--;
+    }
+  }
+}
+
+
+void cmd_help()
+{
+  printf("%%Q      : プログラムを終了\n");   
+   
+  printf("%%C      : CSVデータの登録件数などを表示 \n");
+
+  printf("%%P n    : CSVデータの先頭からn件表示 (n: 0 - 99 ... n = 0，n > 100:全件表示，n < 0:後ろから-n件表示)\n");
+  printf("%%R file : fileから読み込み　\n");
+        
+  printf("%%W file : fileへ書き出し \n");
+    
+  printf("%%F word : wordを含むデータを検索\n"); 
+        
+  printf("%%S n    : データをn番目の項目で整列\n"); 
+     
+  printf("%%D n    : n番目のデータを削除 (n: 0 - 99 ... n=0:全件削除，n < 0，n > 100:警告文の表示)\n");
+       
+  printf("%%V word :  wordを含むデータを削除\n");
+
+  printf("%%B      :  データ群の形を1つ前の状態に戻す\n");
+}
+
+
+void cmd_back(){
+  int i,s=profile_data_nitems;
+  profile_data_nitems=number;
+  for(i=0; i<=profile_data_nitems-1; i++){
+    profile_data_store[i] = another[i];
+  }
+}
+
+
+int check1(char *param){
+if((*param>='a'&& *param<='z') || (*param>='A' && *param<='Z') || (*param>='0' && *param<='9')) {
+  return 1;
+ }
+}
+
+int check2(char *param){
+if(*param>='0' && *param<='9') {
+  return 1;
+ }
+}
+
+int check3(char *param){
+  if((*param>='a'&& *param<='z') || (*param>='A' && *param<='Z')) {
+    return 1;
+  }
+}
+
+void exec_command(char cmd, char *param)
+{
+  switch (cmd){
+  case 'Q': 
+    if(check1(param)==1) {
+      printf("Don't write word\n");
+      break;
+    }else{ 
+      cmd_quit(); 
+      break;
+    }
+  case 'C': 
+    if(check1(param)==1) {
+      printf("Don't write word\n");
+      break;
+    }else{ 
+      cmd_check(); 
+      break;
+    }
+  case 'P': 
+    if(check3(param)==1) {
+      printf("Don't write word\n");
+      break;
+    }else{
+      cmd_print(atoi(param));
+      break;
+    }
+  case 'R': cmd_read(param);        break;
+  case 'W': cmd_write(param);       break;
+  case 'F': cmd_find(param);        break;
+  case 'S': cmd_sort(atoi(param));  break;
+  case 'D': 
+    if(check3(param)==1) {
+      printf("Don't write word\n"); 
+      break;
+    }else{
+      cmd_delete(atoi(param));
+      break;
+    }
+  case 'V': cmd_vanish(param);     break;
+    
+  case 'H': 
+    if(check1(param)==1) {
+      printf("Don't write word\n");
+      break;
+    }else{ 
+      cmd_help(); 
+      break;
+    }
+  case 'B':
+    if(check1(param)==1) {
+      printf("Don't write word\n");
+      break;
+    }else{ 
+      cmd_back(); 
+      break;
+    }
+  default:
+    fprintf(stderr, "Invalid command %c: ignored.\n", cmd);
+    break;
+  }
+}
+
+void parse_line(char *line)
+{
+  if(line[0] == '%'){
+    if(check1(&line[2])==1) {
+      printf("Please space after %c%c\n",line[0],line[1]);
+    }
+    else {
+      exec_command(line[1],&line[3]);
+    }
+  }
+  else{
+    new_profile(&profile_data_store[profile_data_nitems], line);
+    profile_data_nitems++;
+  }
+}
+
+  int main()
+  {
+    char line[MAX_LINE_LEN+1]; 
+    int i;
+    while (get_line(stdin,line)) {
+      parse_line(line);
+    }
+    return 0;
+  }

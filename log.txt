@@ -1,0 +1,109 @@
+%H
+%%Q      : プログラムを終了
+%%C      : CSVデータの登録件数などを表示 
+%%P n    : CSVデータの先頭からn件表示 (n: 0 - 99 ... n = 0，n > 100:全件表示，n < 0:後ろから-n件表示)
+%%R file : fileから読み込み　
+%%W file : fileへ書き出し 
+%%F word : wordを含むデータを検索
+%%S n    : データをn番目の項目で整列
+%%D n    : n番目のデータを削除 (n: 0 - 99 ... n=0:全件削除，n < 0，n > 100:警告文の表示)
+%%V word :  wordを含むデータを削除
+%%B      :  データ群の形を1つ前の状態に戻す
+
+%R sample2.txt
+%C
+11 profile(s)
+%P 3
+ID    : 5100046
+Name  : The Bridge
+Birth : 1845-11-02
+Addr  : 14 Seafield Road Longman Inverness
+Com.  : SEN Unit 2.0 Open
+
+ID    : 5100127
+Name  : Bower Primary School
+Birth : 1908-01-19
+Addr  : Bowermadden Bower Caithness
+Com.  : 01955 641225 Primary 25 2.6 Open
+
+ID    : 5100224
+Name  : Canisbay Primary School
+Birth : 1928-07-05
+Addr  : Canisbay Wick
+Com.  : 01955 611337 Primary 56 3.5 Open
+
+%D 2
+%D was executed
+%P 3
+ID    : 5100046
+Name  : The Bridge
+Birth : 1845-11-02
+Addr  : 14 Seafield Road Longman Inverness
+Com.  : SEN Unit 2.0 Open
+
+ID    : 5100224
+Name  : Canisbay Primary School
+Birth : 1928-07-05
+Addr  : Canisbay Wick
+Com.  : 01955 611337 Primary 56 3.5 Open
+
+ID    : 5100321
+Name  : Castletown Primary School
+Birth : 1913-11-04
+Addr  : Castletown Thurso
+Com.  : 01847 821256 01847 821256 Primary 137 8.5 Open
+
+%B
+%B was executed
+%P 3
+ID    : 5100046
+Name  : The Bridge
+Birth : 1845-11-02
+Addr  : 14 Seafield Road Longman Inverness
+Com.  : SEN Unit 2.0 Open
+
+ID    : 5100127
+Name  : Bower Primary School
+Birth : 1908-01-19
+Addr  : Bowermadden Bower Caithness
+Com.  : 01955 641225 Primary 25 2.6 Open
+
+ID    : 5100224
+Name  : Canisbay Primary School
+Birth : 1928-07-05
+Addr  : Canisbay Wick
+Com.  : 01955 611337 Primary 56 3.5 Open
+
+%F The Bridge
+ID    : 5100046
+Name  : The Bridge
+Birth : 1845-11-02
+Addr  : 14 Seafield Road Longman Inverness
+Com.  : SEN Unit 2.0 Open
+
+%V The Bridge
+%V was executed
+%C
+10 profile(s)
+%S 2
+%S was executed
+%P 3
+ID    : 5100127
+Name  : Bower Primary School
+Birth : 1908-01-19
+Addr  : Bowermadden Bower Caithness
+Com.  : 01955 641225 Primary 25 2.6 Open
+
+ID    : 5100224
+Name  : Canisbay Primary School
+Birth : 1928-07-05
+Addr  : Canisbay Wick
+Com.  : 01955 611337 Primary 56 3.5 Open
+
+ID    : 5100321
+Name  : Castletown Primary School
+Birth : 1913-11-04
+Addr  : Castletown Thurso
+Com.  : 01847 821256 01847 821256 Primary 137 8.5 Open
+
+%Q

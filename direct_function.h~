@@ -1,0 +1,32 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+struct date {
+   int y;
+   int m;
+   int d;
+ };
+ 
+struct profile {
+   int         id;
+   char        name[MAX_STR_LEN+1];
+   struct date birthday;
+   char        home[MAX_STR_LEN+1];
+   char        *comment;
+ };
+
+struct profile profile_data_store[MAX_PROFILES];
+int profile_data_nitems=0; 
+int number;
+FILE *fp;
+
+struct profile another[MAX_PROFILES]; 
+
+void exec_command(char cmd, char *param);
+
+int check1(char *param)
+
+int check2(char *param)
+
+int check3(char *param)

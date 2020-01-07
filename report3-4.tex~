@@ -1,0 +1,216 @@
+    %\documentclass[bigbox]{jarticle}
+    \documentclass{jarticle}[11pt]
+    %\documentstyle[bigbox,fancybox]{jarticle}
+     
+    % コマンドの定義
+    %
+    % コメントアウト用のコマンド
+    %   複数行にまたがる記述をまとめてコメントアウトする際に利用できる
+    %   \COMMENT{ .... } で .... の部分をコメントアウト
+    \newcommand{\COMMENT}[1]{}
+     
+    % 以下は，表(srmmary.tex)で使用しているコマンド
+    \newcommand{\lw}[1]{\smash{\lower2.ex\hbox{#1}}}
+     
+    % 図を参照するためのマクロ
+    \newcommand{\figref}[1]{\makebox{図~\ref{#1}}}
+     
+    % 表を参照するためのマクロ
+    \newcommand{\tabref}[1]{\makebox{表~\ref{#1}}}
+
+    %% 使用しているパッケージ等があれば，宣言しておく
+    \usepackage{ascmac}
+    \usepackage{graphicx} 
+    \usepackage{afterpage}
+    % 以下のパラメータは，見易いように適宜調整する．
+    \topmargin=-1cm
+    \textheight=24cm
+    \textwidth=15.5cm
+    \oddsidemargin=-.2cm
+    \evensidemargin=-.2cm
+     
+    \title{{\normalsize 情報工学実験C（ソフトウェア）報告書}\\
+    （ネットワークプログラミング）\\
+    } 
+
+    \author{ 
+      学生番号: 09429533 \\
+      提出者: 高島和嗣
+    }
+     
+    \date{
+      提出日: 2019年 月日（） \\　%% <-- 提出日を記載のこと
+      締切日: 2019年 月日（）
+    }
+     
+    \begin{document}
+    \maketitle
+    
+    \section{クライアント・サーバモデルの通信の仕組み}
+    クライアントは，サーバに要求メッセージを送信し，サーバで処理された結果を受け取り処理を行う．以下にクライアントの処理の流れを記載する．
+    \begin{enumerate}
+    \item 通信相手のIPアドレスの取得 
+    \item ソケットの形成
+    \item 接続の確立
+    \item 要求メッセージを送信
+    \item 応答メッセージを受信
+    \item 応答メッセージを処理
+    \item ソケットの削除
+    \end{enumerate}
+    サーバは，クライアントからの要求メッセージを常に待ち，要求メッセージが到着したら，処理を行い，結果を送信する．以下にサーバの処理の流れを記載する．
+    \begin{enumerate}
+    \item ソケットの形成
+    \item ソケットの名付け
+    \item 接続要求の待機
+    \item 接続要求の受理
+    \item 要求メッセージを受信
+    \item 応答メッセージを送信
+    \end{enumerate}
+
+    \section{名簿管理プログラムのクライアント・サーバプログラムの作成方針}
+    今回の演習では，外部から入力されたデータを計算機で扱える内部形式に変換して格納し，それらの操作を行う名簿管理プログラムをクライアント・サーバ方式で作成した．
+    名簿管理プログラムは，標準入力から「ID，氏名，生年月日，住所，備考」からなるCSV形式の名簿データを受け，それらをメモリに登録する機能と標準入力から\verb|%|で始まるコマンドを受け，登録してあるデータの件数を表示したり，データ自体を表示したり，整列したりする機能を持つ.
+    名簿管理プログラムで処理を行うコマンド内容を以下に記載する．\\
+    \begin{table}[htb]
+      \label{tbl:コマンドリスト}
+      \begin{tabular}{|l|l|l|}
+        \hline
+        コマンド & 解説 & パラメータ範囲　\\    
+        \hline
+        \verb|%Q| & プログラムを終了 & \\  
+        \hline
+        \verb|%C| & CSVデータの登録件数などを表示 & \\
+        \hline
+        \verb|%P n| & CSVデータの先頭から\verb|n|件表示 & \verb|n|: $0$ \verb|～| $99$ \\ & & ($n = 0，n > 100$:全件表示，\\ & &  $n < 0$:後ろから$-n$件表示)\\
+        \hline
+        \verb|%R file| & fileから読み込み　& \\
+        \hline
+        \verb|%W file| & fileへ書き出し & \\
+        \hline
+        \verb|%F word| & wordを含むデータを検索 & \\
+        \hline
+        \verb|%S n| & データをn番目の項目で整列 & \\
+        \hline
+        \verb|%D n| & n番目のデータを削除　& \verb|n|: $0$ \verb|～| $99$ \\ & & ($n = 0$:全て削除，\\ && $n < 0，n > 100$:警告文の表示)\\
+        \hline
+        \verb|%V word| & wordを含むデータを削除 & \\
+        \hline
+        \verb|%H| & コマンド一覧 & \\
+        \hline
+        \verb|%B| & データ群を1つ前の状態に戻す & \\
+        \hline
+        \hline
+\end{tabular}
+\end{table}
+
+クライアントで入力された内容をサーバに送信し，サーバ側で内容ごとに異なる処理を行うように，場合分けした．
+クライアント側での処理も必要であると思ったコマンドはクライアント側でも場合分けし，処理した．
+具体的には，クライアント側で\verb|%Q|，\verb|%P|，\verb|%R|，\verb|%W|，\verb|%F|とそれ以外の場合とで分けた．
+
+    \section{プログラムの説明}
+今回作成したサーバー・クライアントプログラムの処理の流れを記載する．\\
+\begin{itemize}
+\item クライアント 
+  \begin{enumerate}
+  \item \verb|gethostbyname|関数を用いて通信先のIPアドレスを獲得する．
+  \item \verb|socket|関数でソケットを作成し，\verb|connect|関数を用いるために\verb|sockaddr_in|構造体を\verb|sockaddr|構造体にキャストし，\verb|connect|関数でソケットを接続する．
+  \item \verb|read|関数を用いて標準入力を行い，関数\verb|parse_line|で入力内容がコマンドか，データ入力かで場合分けする．
+  \item コマンドなら，さらに\verb|%Q|，\verb|%P|，\verb|%R|，\verb|%W|，\verb|%F|とそれ以外の場合で処理を分ける．
+  \end{enumerate}
+
+\item サーバ
+  \begin{enumerate}
+  \item \verb|socket|関数でソケットを作成し，\verb|bind|関数でソケットに名前を付け，\verb|listen|関数でクライアント側からの接続要求を待つ．
+  \item \verb|accept|関数でクライアントの接続要求を受け入れる．
+  \item \verb|recv|関数でクライアントからのメッセージを受信する．この時，メッセージが\verb|%Q|ならば，\verb|close|関数でクライアントに接続されているファイルディスクリプタを閉じる．
+  \item 関数\verb|parse_line|で入力内容がコマンドか，データ入力かで場合分けし，コマンドの種類でも場合分けする．
+  \end{enumerate}
+\end{itemize}
+クライアントでは，\verb|parseline|関数で，入力内容がコマンドの時に\%の後に空白を入れるようにエラー処理した．また，\verb|%Q|，\verb|%P|，\verb|%R|，\verb|%W|，\verb|%F|以外の場合は関数\verb|cmd_default|で処理を行う．
+サーバでは，関数\verb|exec_command|で，各コマンドごとの処理で引数の型が適切であるかチェックする．\\
+
+次にサーバ，クライアントでコマンド，データ入力が入力された時の処理内容を説明する．
+\subsection{クライアント}
+\begin{itemize}
+\item コマンドQ \\
+  関数\verb|cmd_quit|，でサーバに入力内容\verb|%Q|を送り，ソケットを閉じた後に，exit関数で処理を終了する．
+
+\item コマンドP \\
+  関数\verb|cmd_print|で，サーバに入力内容\verb|%P n|を送り，応答メッセージを受け取る．この時，\%Pの引数nが数字ではない時，応答メッセージの内容がmissとなっているので，エラー文を表示する．引数が適切の場合，応答メッセージは引数に応じた表示するデータの数である．その数の分だけループ処理をし，データを受け取り，表示する．
+
+\item コマンドR \\
+関数\verb|cmd_read|で，ファイルを読み取り形式で開き，引数のファイル名がクライアントに存在しないときにはエラー文を表示する．存在する場合，ファイルの中身を1行ずつ読み取り，サーバに送信する．全行送り終えた後にファイルを閉じる．
+\item \%W \\
+関数\verb|cmd_write|で，ファイルを書き込み形式で開く．サーバに入力内容\verb|%W fil|を送り，応答メッセージを受け取る．応答メッセージの内容はサーバに存在するデータの総数であるため，その数の分だけループ処理をし，受け取ったデータをファイルに書き込む．
+\item \%F \\
+関数\verb|cmd_find|で，サーバに入力内容\verb|%F word|を送り，応答メッセージを受け取る．応答メッセージの内容はサーバ内の引数として与えた\verb|word|を含むデータの数であるため，0の時はエラー文を表示すし，1以上の時はそのデータをサーバから受け取り表示する．
+\item \%C，\%S，\%D，\%V，\%H ，\%B\\
+  関数\verb|cmd_default|でサーバに入力内容を送り，サーバから応答メッセージを受け取り表示する．また，\verb|\%C|の時は応答メッセージはサーバ内のデータの総数を受け取り，\verb|\%H|の時は登録されているコマンド一覧を受け取り表示するが，\verb|\%S，\%D，\%V，\%B|はサーバ内のデータを変化させる処理なので，応答メッセージとして処理を完了したことを示す文を受け取り，表示する．また，\verb|\%C|，\verb|\%H|は引数が必要ないので，引数が存在する時はエラー文を応答メッセージとして受け取る．\verb|\%D|，\verb|\%B|の引数が数字でないときもエラー文を応答メッセージとして受け取る．\verb|\%V|は引数を含むデータがサーバに存在しない時にエラー文を応答メッセージとして受け取る．
+\end{itemize}
+
+\subsection{サーバ}
+\begin{itemize}
+\item サーバ\\
+受信した内容が\verb|%Q|の時，クライアントに接続されているファイルディスクリプタを閉じ，ループの外に出る．
+また，この時サーバのソケットは閉じず，新しくクライアントと接続すると処理を再開する．
+
+\item サーバ\\
+\verb|%C|の時，サーバに登録されているデータの数を記載した文をクライアントにsendする．
+\end{itemize}
+
+\subsection{\%Pの処理}
+\begin{itemize}
+\item クライアント\\
+関数\verb|cmd_print|でサーバに入力内容\verb|%P|をsendし，サーバに登録されているデータの数をrecvする．
+データの数だけループ処理し，表示する内容をrecvし，printfで表示する．
+\item サーバ\\
+
+\end{itemize}
+
+\subsection{\%Wの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+\subsection{\%Fの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+\subsection{\%Sの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+\subsection{\%Dの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+\subsection{\%Vの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+\subsection{\%Hの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+\subsection{\%Bの処理}
+\begin{itemize}
+\item クライアント\\
+\item サーバ\\
+\end{itemize}
+
+    \section{プログラムの使用法}
+    \section{プログラムの作成過程に関する考察}
+    
+    \section{作成したプログラム}
+\end{document}
