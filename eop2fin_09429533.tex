@@ -1,0 +1,930 @@
+\documentclass[a4j,11pt]{jarticle}
+
+\usepackage[top=25truemm,  bottom=30truemm,
+            left=25truemm, right=25truemm]{geometry}
+
+
+\title{プログラミング演習2 \\
+       期末レポート}
+
+\author{氏名: 高島　和嗣 (takashima kazushi) \\
+        学生番号: 09429533}
+
+\date{出題日: 2018年7月18日 \\
+      提出日: 2018年7月24日 \\
+      締切日: 2018年7月25日 \\} 
+
+\begin{document}
+\maketitle
+
+{\footnotesize \tableofcontents \newpage}
+
+%==========================================%
+\section{概要}
+%==========================================%
+今回の演習では，外部から入力されたデータを計算機で扱える内部形式に変換して格納し，それらを操作する方法について学習した．具体的には，標準入力からCSV形式の名簿データを受けて，登録件数を表示したり，先頭から$n$件登録したデータを表示するプログラムを作成した．
+
+与えられたプログラムの基本仕様と要件，および，本レポートにおける実装の概要を以下に述べる．
+
+\begin{enumerate}
+\setlength{\parskip}{0mm}\setlength{\itemsep}{0mm}
+\item 基本仕様
+\begin{itemize}
+    \item 標準入力から「ID，氏名，生年月日，住所，備考」からなるCSV形式の名簿データを受け，それらをメモリに登録する機能を持つ．CSV形式の例を以下に示す．
+{\fontsize{8pt}{11pt} \selectfont
+　\begin{verbatim}
+5100046,THE bridge,1845-11-2,Seafield Road Longman Inverness,SEN Unit 2.0 Open
+5100127,Bower Primary Scholl,1908-1-19,Bowermadden Bower Caithness,01955 Primary 25 2.6 Open
+5100224,Canisbay Primary Scholl,1928-7-5,Canisbay Wick,01955 611337 Primary 56 3.5 Open
+:
+  \end{verbatim}
+}
+\item 標準入力から\verb|%|で始まるコマンドを受け，登録してあるデータの件数を表示したり，データを表示したり，整列したりする機能を持つ.
+実装するコマンドを表\ref{tbl:commands}に示す．
+\end{itemize}
+
+\item 要件
+\begin{itemize}
+    \item 名簿データは配列などを用いて少なくとも$10000$件のデータを登録できるようにする．今回のプログラムでは，構造体\verb|struct profile|の配列\verb|profile_data_store|を宣言して，$10000$件のデータを格納できるようにする．
+
+    \item 名簿データは構造体\verb|struct profile|および構造体\verb|struct date|を利用して，構造を持ったデータとしてプログラム中に定義して利用する．実装すべきデータ構造は表\ref{tbl:structure_profile}である．表中の$n$~bytesとは，$n$バイトの\verb|char|型配列を意味する．
+    \item コマンドの実行結果出力に不必要なエラーや警告は標準エラー出力に出力すること．
+\end{itemize}
+
+\begin{table}[t]
+    \centering
+    \caption{実装するコマンド}
+    \label{tbl:commands}
+    \begin{tabular}{|l|l|l|}
+        \hline
+        コマンド & 解説 & パラメータ範囲　\\    
+        \hline
+        \verb|%Q| & プログラムを終了 & \\  
+        \hline
+        \verb|%C| & CSVデータの登録件数などを表示 & \\
+        \hline
+        \verb|%P n| & CSVデータの先頭から\verb|n|件表示 & \verb|n|: $0$ \verb|～| $99$ \\ & & ($n = 0，n > 100$:全件表示，\\ & &  $n < 0$:後ろから$-n$件表示)\\
+        \hline
+        \verb|%R file| & fileから読み込み　& \\
+        \hline
+        \verb|%W file| & fileへ書き出し & \\
+        \hline
+        \verb|%F word| & wordを含むデータを検索 & \\
+        \hline
+        \verb|%S n| & データをn番目の項目で整列 & \\
+        \hline
+        \verb|%D n| & n番目のデータを削除　& \verb|n|: $0$ \verb|～| $99$ \\ & & ($n = 0$:全て削除，\\ && $n < 0，n > 100$:警告文の表示)\\
+        \hline
+        \verb|%V word| & wordを含むデータを削除 & \\
+        \hline
+        \verb|%H| & コマンド一覧 & \\
+        \hline
+        \verb|%B| & データ群の形を1つ前の状態に戻す & \\
+        \hline
+        \hline
+    \end{tabular}
+
+\end{table}
+
+\begin{table}[t]
+\centering
+    \caption{名簿データ}
+    \label{tbl:structure_profile}
+    \begin{tabular}{|l|l|l|l|l|}
+        \hline
+        ID & 学校名 & 設立年月日 & 所在地 & 備考データ\\
+        \hline
+        $32$~bit整数 & $70$~bytes & \verb|struct date| & $70$~bytes & 任意長 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+
+ また，本レポートでは，作成過程で生じた疑問に対しての考察，エラー処理について考察をおこなった．例えば，作成過程で使用した関数の代わりに使用できるものはないか，どうして実行できないのか，といったことやCSVのデータ処理時，\verb|exec command|関数の使用時のエラーについておこなった．
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{プログラムの作成方針}\label{pro:plan}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+プログラムを以下の部分から構成することにした．それぞれについて作成方針を立てる．
+\begin{enumerate}
+\setlength{\parskip}{2pt} \setlength{\itemsep}{2pt}
+    \item 必要なデータ構造の宣言部（\ref{sec:declare}節）
+    \item 標準入力から得たCSVデータの解析部（\ref{sec:parse}・節）
+    \item 構文解析したデータの内部形式への変換部（\ref{sec:change}節）
+    \item 各種コマンド実現部（\ref{sec:do}節）
+\end{enumerate}
+
+%--------------------------------------------------------------%
+\subsection{宣言部} \label{sec:declare}\setlength
+%--------------------------------------------------------------%
+``宣言部''は構造体を定義する部分である．このレポートでは概要で示した表\ref{tbl:structure_profile}に基づいて，以下のように宣言する．
+{\fontsize{10pt}{11pt} \selectfont
+\begin{verbatim}
+    struct date {
+      int y;
+      int m;
+      int d;
+    };
+
+    struct profile {
+      int         id;
+      char        name[MAX_STR_LEN+1];
+      struct date birthday;
+      char        home[MAX_STR_LEN+1];
+      char        *comment;
+    };
+    struct profile profile_data_store[MAX_PROFILES];
+\end{verbatim}
+}
+ここで，\verb|name|，\verb|home|についてはバイト数を指定されたので，\verb|name[MAX_STR_LEN+1]|とし，\verb|MAX_|\\\verb|STR_LEN|を$69$と定義したので，文字列を含め$70$byteの\verb|char|配列に格納することができる．
+
+また，\verb|struct profile profile_data_store[MAX_PROFILES]|とし，\verb|MAX_PROFILES|を$10000$と定義したので，$10000$件の\verb|struct profile|を保存することができる．
+
+%--------------------------------------------------------------%
+\subsection{解析部} \label{sec:parse}
+%--------------------------------------------------------------%
+``解析部''は標準入力されたデータを解析し，処理する部分である．しかし，このままでは，入力されたデータがコマンドであるか名簿データであるか判別されていないため，どちらかはエラーとなる．そこで，段階的詳細化の考え方に基づいてさらなる詳細化をおこない，下記の(a)から(e)のように分割することにする．
+
+\begin{enumerate}
+\setlength{\parskip}{2pt} \setlength{\itemsep}{2pt}
+\renewcommand{\labelenumi}{(\alph{enumi})} 
+    \item 標準入力から読むべき行が残っている間，文字の配列\verb|char line[]|に1行分を読み込む．
+    \item \verb|line|の1文字目が，\verb|'%'|ならば，$2$文字目をコマンド名，$4$文字目以降をその引数として，決定されたコマンドを実行する．
+    \item この時，空白であるはずの$3$文字目に文字があるなら，警告文を表示する．
+    \item　加えて，引数が指定したものに相応しいかどうか判別し，相応しくないなら警告文を表示する．（例えば，引数を数値として処理するコマンドの引数に文字を入れてしまった時などである．）
+    \item そうでないならば\verb|line|をCSVとし\verb|','|を区切りとして$5$つの文字列に分割する．
+    \item 分割してできた$5$つの文字列を変換部に渡し構造体に代入する．
+    \item 次の行を読み込む．
+\end{enumerate}
+
+また,文字列を$5$つに分割する時に扱う文字列は$char$型として処理するため,後の変換部ではメンバによっては$char$型から$int$型に変換しなければならないので注意する必要がある.
+
+%--------------------------------------------------------------%
+\subsection{変換部} \label{sec:change}
+%--------------------------------------------------------------%
+``変換部''は分割されたCSVデータを項目毎に型を変換し，対応する構造体メンバに代入する部分である．メンバごとに様々な型を用いているため，適切な代入の使い分けが必要となる．
+
+文字列は関数\verb|strncpy|を用いて代入する．数値の場合，関数\verb|atoi|を用いて文字列を数値に変換してから代入する．構造体\verb|struct date|であるメンバ\verb|birthday|については\verb|new_data|関数に任せる．
+
+なお，\verb|new_data|関数では，\verb|split|関数を用い，文字列を文字列中の\verb|'-'|で区切って，配列\verb|ptr|に格納する．また，分割数が$3$でないとき\verb|NULL|を返り値としているため，出力されない．
+
+また，\verb|p->name|は，配列の要素を$1$つ$1$つコピーする必要があるため\verb|p->name=name|とすることはできないので，関数\verb|malloc|を使ってコピーに必要な分メモリを確保した後に，関数\verb|strcpy|でコピーする必要がある．
+
+%--------------------------------------------------------------%
+\subsection{各種コマンド実現部} \label{sec:do}
+%--------------------------------------------------------------%
+``各種コマンド実現部''は名簿管理プログラムの処理をおこなう部分である．
+このレポートでは，具体的には，\verb|%Q|，\verb|%C|，\verb|%P n|，\verb|%R file|，\verb|%W file|，\verb|%F word|，\verb|%S n|,\verb|%D n|を実装している．
+
+\verb|%P n|は，\verb|printf|で各項目毎に表示すればよい．ただし，$n>0，n=0，n<0$で場合分けしなければならないことに注意が必要があり，$n=0$の時は全件表示，$n<0$の時は後ろから$-n$件表示しなければいけないため，\verb|if|を用いて，表示データの始まりと終わりを$n$の値によって場合分けした．
+
+\verb|%R file|は，ファイルからデータを読み込むコマンドであるが，読み込みたいファイルがないとセグメンテーション違反をおこしプログラムが強制終了してしまうので，\verb|if|文を用いてファイルがないときは警告文をだし，プログラムが終了しないようにした．
+
+\verb|%S n|は，整列のみするので整列後のデータを表示するには\verb|%P|を使う．ただし，$n$の値によってどの項目で整列するかは異なるので，\verb|switch|関数を用いて場合分けした．
+
+\verb|%D n|では，n番目のデータを削除すればよい．ただし，$n$が$0$の時や$-$の時や保存されているデータより大きい数字である時で場合分けしなければならない．\verb|if|関数を用いて，$n=0$の時は全件削除，$n$が$ー$の数もしくは保存しているデータ数より大きい数の時は警告文を表示するようにした．
+
+
+
+\verb|%B|では，データ群の形を$1$つ前の状態に戻せばよい．そのために，実行するとデータ群の形が変わるコマンドには，実行する前に1つ前のコマンドによって処理されたデータ群を別の構造体に保存するという処理をいれた．
+%=======================================================%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{プログラムおよびその説明}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+プログラムリストは\ref{program}節に添付している．プログラムは全部で$478$行からなる．
+以下では，前節の作成方針における分類に基づいて，プログラムの主な構造について説明する．
+
+%--------------------------------------------------------------%
+\subsection{文字列の定義及び構造体の宣言部（1行目から28行目）}
+%--------------------------------------------------------------%
+$4$行目で\verb|MAX_LINE_LEN|を$1024$と，$5$行目で\verb|MAX_STR_LEN|を$69$と，$6$行目で\verb|MAX_PROFILES|を$10000$と定義する．$10$\verb|～|$14$行目は\verb|struct date|データ型の宣言部で，$16$\verb|～|$22$行目は\verb|struct| \verb|profile|データ型の宣言部である．
+
+$8$行目では，,\verb|void parse_line(char *)|をグローバル変数として宣言する．
+
+また，メンバの内\verb|name|と\verb|home|はバイト数を指定されているため，\verb|MAX_STR_LEN|を使って制限をつけた．
+
+$24$行目は，$10000$件の\verb|struct profile|を保存できるように宣言したグローバル変数である．
+
+$25$行目は，配列\verb|profile profile_data_store|に入っているデータの個数である．
+
+$26$行目では，\verb|int|型の\verb|number|を，$27$行目では，\verb|FILE|型の\verb|*fp|を，$28$行目では，\verb|struct profile|型の構造体\verb|another[MAX_PROFILES]|をグローバル変数として宣言する．
+
+%--------------------------------------------------------------%
+\subsection{汎用的な関数の宣言部（30行目から 68行目）}
+%--------------------------------------------------------------
+まず，汎用的な文字列操作関数として，\verb|subst()|関数を$30$\verb|～|$42$行目で宣言し，\verb|split()|関数を$44$\verb|～|$58$行目で宣言し，\verb|get_line()|関数を$60$\verb|～|$68$行目で宣言している．
+
+\verb|subst|は，\verb|str|が指す文字列中の文字\verb|c1|を文字\verb|c2|に置き換える．置き換えた回数を返り値として返す．今回のプログラム中では，\verb|get_line()|関数内で改行文字をヌル文字に置き換えるために使用している．
+
+\verb|split|は，文字列\verb|str|を\verb|sep|で分割し，配列\verb|ret|に格納する．分割数を返り値として返す．今回のプログラムでは，\verb|struct date*new_date()|関数内で ``2004-05-10'' のような日付を表す文字列を '-' で分割するために使用している．
+
+\verb|get_line()|は，\verb|fgets|関数を用いて標準入力から$1$行読み，文字配列\verb|line|に格納する．成功した時は$1$を，失敗した時(もう読む行がない)は$0$を返り値として返す．
+$1$行の長さは，\verb|MAX_LINE_LEN|を$1024$と定義しているため，$1024+1$($+1$は改行文字\verb|'\n'|)としている．また，\verb|subst|によって改行文字をヌル文字で置き換えている．
+また，引数に\verb|FILE|型を加えて，標準入力から$1$行読み込むだけでなく，ファイルからも読み込めるようにした．
+
+%--------------------------------------------------------------%
+\subsection{構造体のデータ型を扱う関数の解析部（70行目から105行目）}
+%--------------------------------------------------------------%
+$70$\verb|～|$82$行目は\verb|struct date|データ型を扱う関数群で，$84$\verb|～|$105$行目は\verb|struct profile|データ型を扱う関数群である．文字列から各データ型への変換を担う関数は，名前をnew\_データ型とすることで，変換部であることを明確にした．
+
+\verb|struct date|では，その型の変数\verb|d|を宣言し，\verb|split()|関数で分割した後，\verb|y，m，d|のメンバに値をそれぞれ与えた．また，関数\verb|atoi|を用いて値を文字列から数値に変換しなければならない．
+
+\verb|struct profile|では，その型の変数\verb|p|を宣言し，\verb|split()|関数で分割した後，\verb|id，name，|\\\verb|birthday，home，comment|のメンバに値をそれぞれ与えた．
+
+\verb|id|は，値を関数\verb|atoi|を用いて文字列から数値に変換して，代入する．
+
+\verb|name,home|は，関数\verb|strncpy|を用いて，文字列をコピーし，最後の文字をヌル文字に置き換える．
+
+\verb|birthday|は，\verb|new_date|関数に任せている．
+
+\verb|comment|は，まず，変数\verb|malloc|でコピーするのに必要な領域を確保しなければならない．\verb|malloc|は，文字列\verb|qtr[4]|の長さ$+1$($+1$は\verb|'\0'|の分)のメモリを新たに確保して，その先頭アドレスを返却し，それを\verb|(char *)|とみなして\verb|p->comment|に代入する．こうすることで，\verb|p->comment|は，新たに確保されたメモリの先頭を指す．この後，\verb|qtr[4]|を関数\verb|strcpy|で\verb|p->comment|の領域にコピーする．
+
+%--------------------------------------------------------------%
+\subsection{コマンド部分の解析部（107行目から366行目）}
+%--------------------------------------------------------------
+$107$ \verb|～|$366$行目では，コマンド\%Q，\%C，\%P, \%R，\%W，\%F，\%S，\%Dを作っている．
+
+コマンド\%Qは，関数\verb|exit(0)|を用いてプログラムを終了する． 
+
+コマンド\%Cは，\verb|printf|を用いて登録件数を表示する． 
+
+コマンド\%Pは，まず，\verb|struct profile|の各メンバを出力する関数\verb|print_profile|を作った．メンバの1つの\verb|birthday|は表示の仕様が他と異なるため，\verb|struct date|のメンバを関数\verb|sprintf|を用いて\verb|buf|に格納し，\verb|buf|を返り値とする\verb|date_string|関数を作った．また，引数の数値によって何件表示するか変わるため\verb|if|を用い，$n$の値によって場合分けをした．引数$n$が$0$の時は保存しているデータを全件表示し，引数が$0$より大きく，格納されているデータ数より小さいときは先頭から$n$件分のデータを表示した．引数が$-$の値の時は先頭から後ろへ$n$件分のデータを表示し，引数が格納されているデータ数より大きい時は，全件表示する．
+
+コマンド\%Rは，モードを$r$として関数\verb|fopen|でファイル\verb|fp|を開くが，開きたいファイルが存在しない時は，警告文を表示する．\verb|get_line|関数を用いて\verb|fp|から$１$行読み込み，配列\verb|line|がある限り\verb|parse_line|関数を実行し続ける．最後に\verb|fclose|で\verb|fp|を閉じる．
+
+コマンド\%Wは，まず，\verb|struct profile|の各メンバをファイル\verb|fp|に$CSV$形式で出力するような\verb|fprintf_profile|
+\verb|_csv|関数を作った．モードを$w$として関数を用いてファイルを開いた．この時，開きたいファイルが存在しない時は，警告文を表示する．\verb|fprintf_profile_csv|を用いて，入力されているデータを\verb|fp|に出力した．最後に\verb|fclose|で\verb|fp|を閉じる．　　　
+
+コマンド\%Fは，構造体のメンバの\verb|id|には数値がはいるため，関数\verb|sprintf|を用いて数値を文字列に変換し，関数\verb|strcmp|を用いてデータのメンバの文字列と入力した文字列が同じかを判別し，同じならば返り値として$0$を返す\verb|strcmp_word|関数を作った．
+\verb|strcmp_word|関数の返り値が$0$の時，\verb|print_profile|関数によってそのデータが出力されるという動きを格納されているデータの数だけ繰り返す．また，入力した文字列と同じ文字列を含むデータが存在しない時は警告文を表示する．
+
+コマンド\%Sは，まず，$2$つの構造体のデータを入れ替えるための\verb|swap|関数を作った．次に，入力された引数によってデータを整列するための基準を区別するために関数\verb|switch|を用いて\verb|compare_profile|関数を作り，メンバの$1$つである\verb|birthday|を年，月，日ごとに比べれるように\verb|compare_date|関数を作った．コマンド\%Sは，入力された引数に応じて各メンバを基準に整列させるコマンドである．よって，比べる$2$つのデータが\verb|compare_profile|関数で設定した条件を満たすとき，\verb|swap|関数により順番を入れ替えるという操作を繰り返す．
+
+コマンド\%Dは，引数$n$で指定された番目のデータを削除するために，$n$番目以降のデータを$1$つずつずらしていくという動きを登録されているデータ数より$1$少ない回数だけループする．最後に登録されているデータの数を$1$少なくする
+また，入力した引数$n$が$0$より大きく格納されているデータ数以下の数値の時，データの数を$1$つ減らして，$n$番目のデータを削除し，$n$が$0$もしくは入力されていないときは全てのデータを削除し，それ以外の時は警告文を表示する．
+
+コマンド\%Vは，コマンド\%F，コマンド\%Dを複合させたものである．構造体のメンバの\verb|id|には数値がはいるため，数値を文字列に変換する\verb|sprintf|を用いた．関数\verb|strcmp|を用いてデータのメンバの文字列と入力した文字列が同じかを判別し，同じならばそのデータを削除する．また，入力した文字列と同じ文字列を含むデータが存在しない時は警告文を表示する．
+
+コマンド\%Hは，実行可能なコマンドを全て\verb|printf|で表示する．
+
+コマンド\%Bは，データ群の形を$1$つ前の状態に戻すために，実行後にデータ群の形が変わるコマンド（\%R，\%S，\%D，\%V）のプログラムにそのコマンドの処理が起こる前に，$1$つ前のコマンドが処理した後のデータ群を別の構造体\verb|another[i]|に保存するという処理をいれた．このコマンドが実行された時，構造体\verb|profile_data_store[i]|を\verb|another[i]|に置き換える．
+
+%--------------------------------------------------------------%
+\subsection{コマンド部分の変換部（369行目から470行目）}
+%--------------------------------------------------------------
+$367$\verb|～|$383$行目は，コマンドの引数がそのコマンドに相応しいか調べるための関数を作った．
+\verb|check1|関数は，引数が文字か数値である時返り値$1$を返す関数で，\verb|check2|は，引数が数値である時返り値$1$を返す関数，\verb|check3|は引数が文字である時返り値$1$を返す関数である．
+
+$385$\verb|～|$452$行目は，コマンドによって処理を変える関数を製作している．\verb|switch-case|文を用い，入力文字によって処理を変えている．また，指定以外の文字が入力された時はエラーを意味する文字列を出力する．また，入力した引数がコマンドのプログラム製作時に指定した引数に相応しいかどうかを\verb|check1|関数，\verb|check2|関数，\verb|check3|関数を用いて調べ，相応しくない時は警告文を表示する．
+
+$454$\verb|～|$468$行目は，入力によって操作を変える関数を製作している．入力文字の$1$文字目が\%ならば，\verb|exec_command|関数を用い，コマンド処理をする．また，コマンドと引数の間は必ず空白であるので，文字か数値が入っている時は，警告文を表示するように処理した．
+
+そうでないなら，\verb|new_profile|関数を用い，CSV形式のデータの処理し，処理後を出力する．
+
+%--------------------------------------------------------------%
+\subsection{名簿管理及びコマンドの実現部（472行目から480行目）}
+%--------------------------------------------------------------%
+$470$行目以降は，\verb|main()|関数であり，作成方針で説明した解析部の動作のおおよそに相当している．
+\verb|get_line|関数によって読み込む配列\verb|line|がある限り，\verb|parse_line|関数を実行し続ける．
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{プログラムの使用法}\label{pro:do}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+本プログラムは名簿データを管理するためのプログラムである．CSV形式のデータと\%で始まるコマンドを標準入力から受け付け，処理結果を標準出力に出力する．
+
+\verb|gcc|でコンパイルした後，標準入力から入力データを与える．
+{\fontsize{10pt}{11pt} \selectfont
+ \begin{verbatim}
+   gcc program.c
+   ./a.out
+ \end{verbatim}
+}
+プログラムの出力結果としては，CSVデータをコマンドの処理した状態で出力する．例えば，下記のようにコマンドを入力すると，
+{\fontsize{8pt}{11pt} \selectfont
+ \begin{verbatim}
+   %R sample.txt
+   %P　2
+   %D 2
+   %V The Bridge
+   %P
+   %B
+   %C
+ \end{verbatim}
+}
+\noindent 
+以下のような出力を得る．
+{\fontsize{10pt}{11pt} \selectfont
+ \begin{verbatim}
+ID    : 5100046
+Name  : The Bridge
+Birth : 1845-11-02
+Addr  : 14 Seafield Road Longman Inverness
+Com.  : SEN Unit 2.0 Open
+
+ID    : 5100224
+Name  : Canisbay Primary School
+Birth : 1928-07-05
+Addr  : Canisbay Wick
+Com.  : 01955 611337 Primary 56 3.5 Open
+
+
+ID    : 5100127
+Name  : Bower Primary School
+Birth : 1908-01-19
+Addr  : Bowermadden Bower Caithness
+Com.  : 01955 641225 Primary 25 2.6 Open
+
+
+2 profile(s)
+ \end{verbatim}
+}
+\noindent
+入力中の\%Cは，入力データの件数を示し，\%P $2$は，先頭から$2$番目までのデータを表示する．\%R \verb|sample.txt|は，\verb|sample.txt|というファイルに保存されているデータを読み込み，\%D　$2$は入力されたデータの$2$番目を削除すし，\%V \verb|The Bridge|は\verb|The Bridge|を含むデータを削除する．\%Bは，\%Vで行った処理の$1$つ前のデータ群に戻している．
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{作成過程における考察}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\ref{pro:plan}節で述べた実装方針に基づいて，\ref{pro:do}節ではその実装をおこなった．しかし，実装の際，今回使用した関数ではない関数を使用する場合ならどうなるのかと考えた．本節では，名簿管理プログラムの作成過程において検討した内容，および，考察した内容について述べる．
+
+%--------------------------------------------------------------%
+\subsection{fgetsについての考察}
+%--------------------------------------------------------------
+\verb|fgets|関数以外にも標準入力から$1$行読む関数はいくつかある．
+
+\verb|scanf|を使うことも考えたが，\verb|scanf|は入力した文字列の中に空白がある時，区切り文字として扱うため，空白の前までの文字列しか入力されない．また，次に\verb|scanf|を使うとき入力に関わらず，空白の後の残りの文字列を代入してしまう．\verb|scanf("%s"，a)|という形を\verb|scanf("%[^\n]"，a)|という形にすると防げるようだったが，複雑で分かりにくかった．また，バッファオーバーランを起こす危険性もあったため使用しなかった．
+
+\verb|gets|を使うことも考えたが，入力文字列の文字数を制限する機能がなく，用意したメモリ領域を越えて\verb|gets|が文字列を書込んでしまいバッファオーバーランを起こす危険性があった．よって，今回は入力文字列の文字数を制限することができる\verb|fgets|を使った．
+
+%--------------------------------------------------------------%
+\subsection{strcpyとstrncpyについての考察}
+%--------------------------------------------------------------%
+文字数の上限がある場合は，\verb|strcpy|を用いるとメモリを越える文字数を入力するとバッファオーバーランを起こす危険性があるため，\verb|strncpy|を使う必要がある．\verb|strncpy|が文字数の上限を定めた状態で，文字列長が上限を越えた場合，上限を越えた文字はコピーされず，上限までの文字しかコピーされないと考えた．また，メモリの容量をとても大きくしたのなら，\verb|strcpy|を使うことはできると思ったが，\verb|strncpy|を使う方が簡潔だったため\verb|strncpy|を用いた．
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{結果に関する考察}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{enumerate}
+\setlength{\parskip}{2pt} \setlength{\itemsep}{2pt}
+    \item 不足機能についての考察
+    \item エラー処理についての考察
+    \item 新規コマンドの実装
+    \item 既存コマンドの改良
+\end{enumerate}
+
+%-----------------------------------------------------%
+\subsection{不足機能についての考察}
+%-----------------------------------------------------%
+\begin{enumerate}
+\item 不要なデータやデータ群を削除できるようなコマンドが必要である．
+
+\item データ群を処理前の状態に戻す．
+\end{enumerate}
+
+%--------------------------------------------------------------%
+\subsection{エラー処理についての考察}
+%--------------------------------------------------------------%
+\subsubsection{CSVデータ処理中のエラー処理}
+CSVデータ中に，不正なデータが含まれていた場合の処理について考察する．今回は，エラーのあった行を指摘して，無視する方法を実行した．現時点ではエラー処理については未実装であるが，エラー時にはエラーのあった行にエラーを示す文を出力するつもりだ． 
+
+\subsubsection{exec\_command関数におけるエラー処理}
+コマンド入力時に，不正なデータが含まれていた場合の処理について考察する．今回は，指定の文字ではなかったときは全て\verb|fprintf(stderr, "Invalid command %c: ignored.\n", cmd|と表示するようにした．コマンドが違っていた場合はこれだけ十分であるが，コマンドと引数の間に空白を空けずに実行してしまっても，エラーとならずに実行される．そこで，引数の有る無し関係なくコマンド文字と引数の間は，必ず空白であるのでそこに値が入っているかどうか場合分けして，空白でないなら警告文を表示した．
+
+\subsubsection{exec\_command関数におけるエラー処理2}
+引数が必要ないコマンドに引数を入力してしまった時や引数が数値のコマンドに文字列を入力してしまった時，引数が$0$として扱われていたためエラー処理を行う必要があると思った．引数が数値か文字列かで場合分けする関数を作り，その引数が相応しくないなら警告文を表示した．
+
+\subsubsection{\%Rコマンドにおけるエラー処理}
+\%Rは，エラー処理をしていないと，存在しないファイル名を引数にした時にセグメンテーションエラーをはき，プログラムが強制終了してしまった．そこで，ファイルがないときは警告文を表示するとともに，プログラムが強制終了しないように処理した．
+
+\subsubsection{\%Bコマンドにおけるエラー処理}
+\%Bを作るに当たって，\%R，\%S，\%D，\%Vに$1$つ前のコマンドが処理した後のデータ群を別の構造体に保存するというプログラムを追加しなければならなかった．また，\%R，\%S，\%D，\%Vの実行がエラーとなった時，そのコマンドのことは考えずに\%Bを実行したかったので，エラー処理の文の内容を変えるとともに，その文をプログラムの$1$番最初に持ってくるようにした．
+
+%----------------------------------%
+\subsection{新規コマンドの実装}
+%---------------------------------=%
+\%Dコマンドは，メモリ中に保持しているデータから引数で与えられた数値に応じてデータを削除する
+間違えて入力してしまったデータや操作に必要ないデータを削除できるようにするため\%Dコマンドを実装した．例えば，\%Rで操作したいデータを読み込む時，それまでに操作していたデータ群は不要であるときがあった． 
+
+\%Vコマンドは，メモリ中に保持しているデータから引数で与えられた\verb|word|と同じ文字列を持つデータを削除する．データの数が多いと，\%Dでは何番目にあるか探すのに手間がかかるため\%Vを実装した．
+
+\%Hコマンドは，登録しているコマンドを全て表示する．コマンドの数が増えたため，わかりやすく見れるように作った．
+
+\%Bコマンドは，他のコマンドの処理によって変化したデータ群を処理する$1$つ前の状態に戻す．これは，間違って消したくないデータを消してしまった時に，新しく追加しなくても元に戻せるように作った．
+
+%=---------------------------------%
+\subsection{既存コマンドの改良}
+%---------------------------------=%
+1学期期末の時に考察した\verb|exe_command|におけるエラー処理の問題を解くために，\verb|isspace|関数を使ってみた．コマンドと引数の間に空白がある時のみ\verb|exec\_command|関数が実行されるようにし，空白部分に値があった時には警告文を出すようにした．これにより，\%P12のように入力した時に\%P 2と同じ操作になることはなくなった．しかし，\%C，\%Pのような引数が必要でないコマンドの時もスペースキーで空白を入力しないと警告文を出すようになってしまった．初めは，\verb|issapace|関数を用いて，空白時の判定は可能だったが，引数を入力しないコマンドでは思うような結果にならなかった．\verb|issapace|関数は，改行でも空白と同じ反応をするので問題ないと思っていたが，プログラムを実行する時のエンターキーは改行として扱われていないのではないかと思ったた．そこで，\verb|line[2]|が英語の大文字，小文字，数字のであるかどうかを判別する関数を作り，そうではない時，つまり\verb|line[2]|が空白ではないとき警告文を出すようにした．
+
+%=---------------------------------%
+\subsection{本課題の要件に対する考察}
+%---------------------------------=%
+\verb|struct profile|がメモリ中を占めるバイト数は，$168$byte．一方，構造体の各メンバのバイト数は，
+\verb|id|: $4$byte，\verb|name|: $70$byte，\verb|birthday|: $12$byte，\verb|home|: $70$byte，\verb|comment|: $8$byte，となり合計すると$164$byteで構造体のバイト数と一致しなかった．調べて見たところ，多くのCPUは、メモリにアクセスするときには\verb|int|のサイズである$4$byteごとにメモリを区切って$1$つ$1$つの単位でアクセスするとあった．この区切りをまたぐデータを扱うには，メモリに$2$回アクセスしなければならず，アクセスが遅くなってしまう．これを防ぐために，メンバとメンバの間に空間を開ける’パディング’と偶数バイト位置や$4$の倍数バイト位置にメンバを割り当てる’アライメント’を行い，データがメモリをまたがないようにしているとあった．つまり今回のプログラムにおいては，\verb|id|，\verb|birthday|，\verb|comment|はバイト数が$4$の倍数で問題ないが，\verb|name|と\verb|home|は$70$byteで4の倍数でないのでそれぞれ$2$byte分余分にメモリを確保しているのだと思った．この$4$byteと構造体の各メンバのバイト数の合計の$164$byteをたすと，構造体のバイト数$168$byteに一致するので，このように考えた．
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{感想}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+今回のレポートは，$1$学期期末のレポートまでの範囲に加えて，複数のコマンドを実装した．コマンドの数が増えたことによって今までのプログラムのままでは実装できない部分もあったため中身を書き直したり，不足機能を補うために新しいコマンドを考えなければならなかったため大変だった．不足機能のために新しくコマンド作ろうとしても，エラーをはいたり，期待している結果にならなかったり，書き直した既存コマンドがはたらくなくなったりすることもあったので，時間がかかってしまった．また，今回作った\%Bコマンドは，$1$つ前に戻すようなプログラムしか作ることができなかったので，今後改良することができたら，引数で与えられた数値の分だけ前の状態に戻せるような処理内容のプログラムを作りたい．
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{作成したプログラム}\label{program}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+作成したプログラムを以下に添付する．
+{\fontsize{10pt}{11pt} \selectfont
+\begin{verbatim}
+     1	#include <stdio.h>
+     2	#include <string.h>
+     3	#include <stdlib.h>
+     4	#define MAX_LINE_LEN 1024
+     5	#define MAX_STR_LEN  69
+     6	#define MAX_PROFILES 10000
+     7	
+     8	void parse_line(char *);
+     9	
+    10	 struct date {
+    11	   int y;
+    12	   int m;
+    13	   int d;
+    14	 };
+    15	 
+    16	 struct profile {
+    17	   int         id;
+    18	   char        name[MAX_STR_LEN+1];
+    19	   struct date birthday;
+    20	   char        home[MAX_STR_LEN+1];
+    21	   char        *comment;
+    22	 };
+    23	
+    24	struct profile profile_data_store[MAX_PROFILES];
+    25	int profile_data_nitems=0; 
+    26	int number;
+    27	FILE *fp;
+    28	struct profile another[MAX_PROFILES];
+    29	
+    30	 int subst(char *str, char c1, char c2)
+    31	 {
+    32	   int n = 0;
+    33	 
+    34	   while (*str) {
+    35	     if (*str == c1) {
+    36	       *str = c2;
+    37	       n++;
+    38	    }
+    39	     str++;
+    40	   }
+    41	   return n;
+    42	 }
+    43	
+    44	 int split(char *str, char *ret[], char sep, int max)
+    45	 {
+    46	   int n = 0;
+    47	   ret[n++] = str; 
+    48	   while (*str && n < max) {
+    49	     if (*str == sep){
+    50	      *str = '\0';
+    51	      if(*(str+1) != sep){
+    52	       ret[n++] = str + 1;
+    53	      }
+    54	     }
+    55	     str++;
+    56	   }
+    57	  return n;
+    58	 }
+    59	
+    60	int get_line(FILE *fp,char *line)
+    61	 {
+    62	   if (fgets(line, MAX_LINE_LEN + 1, fp) == NULL){
+    63	     return 0;
+    64	 } else{
+    65	   subst(line, '\n', '\0');
+    66	   return 1;
+    67	   }
+    68	 }
+    69	
+    70	struct date *new_date(struct date *d, char *str)
+    71	  {
+    72	   char *ptr[3];
+    73	 
+    74	   if (split(str, ptr, '-', 3) != 3){
+    75	     return NULL;
+    76	   } else{
+    77	   d->y = atoi(ptr[0]);
+    78	   d->m = atoi(ptr[1]);
+    79	   d->d = atoi(ptr[2]);
+    80	   return d;
+    81	   }
+    82	 }
+    83	
+    84	 struct profile *new_profile(struct profile *p, char *csv)
+    85	 {
+    86	   char *qtr[5];
+    87	 
+    88	   if (split(csv, qtr, ',', 5) != 5) 
+    89	     return NULL; 
+    90	
+    91	   p->id = atoi(qtr[0]); 
+    92	
+    93	    strncpy(p->name, qtr[1], MAX_STR_LEN); 
+    94	    p->name[MAX_STR_LEN] = '\0';
+    95	
+    96	   if (new_date(&p->birthday, qtr[2]) == NULL) 
+    97	     return NULL; 
+    98	 
+    99	   strncpy(p->home, qtr[3], MAX_STR_LEN);  
+   100	   p->home[MAX_STR_LEN] = '\0';
+   101	
+   102	   p->comment = (char *)malloc(sizeof(char) * (strlen(qtr[4])+1));
+   103	   strcpy(p->comment, qtr[4]);   
+   104	   return p;          
+   105	 }
+   106	
+   107	void cmd_quit()
+   108	{
+   109	  exit(0);
+   110	}
+   111	
+   112	
+   113	void cmd_check()
+   114	{
+   115	  printf("%d profile(s)\n",profile_data_nitems);
+   116	}
+   117	
+   118	
+   119	char *date_string(char buf[],struct date *date)
+   120	{
+   121	  sprintf(buf,"%04d-%02d-%02d",date->y,date->m,date->d);
+   122	  return buf;
+   123	}
+   124	
+   125	void print_profile(struct profile *p)
+   126	{
+   127	  char date[20];
+   128	  printf("ID    : %d\n",p->id);
+   129	  printf("Name  : %s\n", p->name);
+   130	  printf("Birth : %s\n", date_string(date, &p->birthday));
+   131	  printf("Addr  : %s\n", p->home);
+   132	  printf("Com.  : %s\n", p->comment);
+   133	}
+   134	
+   135	void cmd_print(int nitems)
+   136	{
+   137	  int i, start = 0,end = profile_data_nitems;
+   138	  if (nitems > 0) {
+   139	    if(nitems < profile_data_nitems) end = nitems;
+   140	  }
+   141	  else if (nitems < 0) {
+   142	    if(end + nitems > start) start = end + nitems ;
+   143	  }
+   144	  for (i = start; i < end; i++) {
+   145	    print_profile(&profile_data_store[i]);
+   146	    printf("\n");
+   147	  }
+   148	}
+   149	
+   150	
+   151	void cmd_read(char *filename)
+   152	{
+   153	  int l;
+   154	  char line[MAX_LINE_LEN + 1];
+   155	  if((fp = fopen(filename,"r")) == NULL){
+   156	    fprintf(stderr, "%%R: file open error %s.\n", filename);
+   157	    return;
+   158	    }
+   159	   number=profile_data_nitems;
+   160	  for(l=0; l<=number-1; l++){
+   161	    another[l] = profile_data_store[l];
+   162	  }
+   163	  while(get_line(fp,line)){
+   164	    parse_line(line);
+   165	  }
+   166	  fclose(fp); 
+   167	}
+   168	
+   169	void fprint_profile_csv(FILE *fp,struct profile *p)
+   170	{
+   171	  char date[20];
+   172	  fprintf(fp,"%d,%s,%s,%s,%s\n",p->id,p->name,date_string(date,&p->birthday),
+p->home,p->comment);
+   173	}
+   174	
+   175	void cmd_write(char *filename)
+   176	{
+   177	  int i,l;
+   178	  if((fp = fopen(filename,"w")) == NULL){
+   179	      fprintf(stderr,"error");
+   180	    }
+   181	  number=profile_data_nitems;
+   182	  for(i=0; i<=number-1; i++){
+   183	    another[i] = profile_data_store[i];
+   184	  }
+   185	
+   186	  for (i = 0; i < profile_data_nitems; i++) {
+   187	    fprint_profile_csv(fp,&profile_data_store[i]);
+   188	  }
+   189	  fclose(fp);
+   190	}
+   191	
+   192	
+   193	int strcmp_word(struct profile *p,char *word)
+   194	{
+   195	  char id[20];
+   196	  char date[20];
+   197	 sprintf(id,"%d",p->id);
+   198	 if(strcmp(id, word) == 0||strcmp(p->name, word) == 0||strcmp(date_string(date, 
+&p->birthday), word) == 0||strcmp(p->home, word) == 0||strcmp(p->comment, word) == 0){
+   199	   return 0;
+   200	 } 
+   201	}
+   202	
+   203	void cmd_find(char *word)
+   204	{
+   205	  int i,times=0;
+   206	  struct profile *p;
+   207	
+   208	  for (i=0; i < profile_data_nitems; i++) {
+   209	    p=&profile_data_store[i];
+   210	    if(strcmp_word(p,word)==0){ 
+   211	      print_profile(p);
+   212	      printf("\n");
+   213	      times++;
+   214	    }
+   215	  }
+   216	  if(times == 0){
+   217	    printf("data which have %s :ignored.\n",word);
+   218	  }
+   219	}
+   220	
+   221	
+   222	void swap(struct profile *p1, struct profile *p2)
+   223	{
+   224	  struct profile tmp;
+   225	
+   226	  tmp = *p1;
+   227	  *p1 = *p2;
+   228	  *p2 = tmp;
+   229	}
+   230	
+   231	int compare_date(struct date *d1, struct date *d2)
+   232	{
+   233	  if (d1->y != d2->y) return (d1->y) - (d2->y);
+   234	  if (d1->m != d2->m) return (d1->m) - (d2->m);
+   235	  return (d1->d) - (d2->d);
+   236	}
+   237	
+   238	int compare_profile(struct profile *p1, struct profile *p2, int column)
+   239	{
+   240	  switch (column) {
+   241	    case 1:
+   242	      return p1->id - p2->id; break; 
+   243	    case 2:
+   244	      return strcmp(p1->name,p2->name); break;  
+   245	    case 3:
+   246	      return compare_date(&p1->birthday,&p2->birthday); break;  
+   247	    case 4:
+   248	      return strcmp(p1->home,p2->home); break;  
+   249	    case 5:
+   250	      return strcmp(p1->comment,p2->comment); break; 
+   251	    }
+   252	}
+   253	
+   254	void cmd_sort(int column)
+   255	{
+   256	  int length =profile_data_nitems;
+   257	  int i,j,l,s;
+   258	  struct profile *p;
+   259	  s = length-1;
+   260	  if(column != 1 && column != 2 &&column !=3 && column != 4 && column !=5 ){
+   261	    fprintf(stderr, "Invalid number %d: ignored.\n", column);
+   262	  }
+   263	  number=profile_data_nitems;
+   264	  for(l=0; l<=number-1; l++){
+   265	    another[l] = profile_data_store[l];
+   266	  }
+   267	  for(i = 0; i <= s; i++) {
+   268	    for (j = 0; j <= s - 1; j++) {
+   269	      p=&profile_data_store[j];
+   270	      if (compare_profile(p, (p+1), column) > 0)
+   271	        swap(p, (p+1));  
+   272	    }
+   273	  }
+   274	}
+   275	
+   276	
+   277	void cmd_delete(int nitems)
+   278	{
+   279	  int i, l, end = profile_data_nitems-1;
+   280	 if(nitems < 0 || nitems > end+1){
+   281	    printf("ERROR\n");
+   282	  }
+   283	  number=profile_data_nitems;
+   284	  for(l=0; l<=number-1; l++){
+   285	    another[l] = profile_data_store[l];
+   286	  }
+   287	 if(nitems > 0 && nitems < end+1){
+   288	    for(i=nitems-1;i<end;i++){
+   289	      profile_data_store[i]=profile_data_store[i+1];  
+   290	    }
+   291	    profile_data_nitems--;
+   292	  }
+   293	  else if(nitems == end+1){
+   294	    profile_data_nitems--;
+   295	  }
+   296	  else if(nitems == 0 ){
+   297	    printf("ALL DELETE\n");
+   298	    profile_data_nitems=0;
+   299	  }
+   300	  
+   301	    
+   302	  
+   303
+   304	
+   305	
+   306	void cmd_vanish(char *word)
+   307	{
+   308	  int i,k,l,times=0;
+   309	  char date[20];
+   310	  char id[20];
+   311	  struct profile *p;
+   312	for (i=0; i < profile_data_nitems; i++) {
+   313	    p=&profile_data_store[i];
+   314	    if(strcmp_word(p,word)==0){
+   315	      times++;
+   316	    }
+   317	 }
+   318	 if(times==0){
+   319	   printf("NOT EXIST!\n");
+   320	 }
+   321	  number=profile_data_nitems;
+   322	  for(l=0; l<=number-1; l++){
+   323	    another[l] = profile_data_store[l];
+   324	  }
+   325	  for (i=0; i < profile_data_nitems; i++) {
+   326	    p=&profile_data_store[i];
+   327	    if(strcmp_word(p,word)==0){
+   328	      for(k=i;k<profile_data_nitems-1;k++){
+   329		profile_data_store[k]=profile_data_store[k+1];  
+   330	      }
+   331	      profile_data_nitems--;
+   332	    }
+   333	  }
+   334	}
+   335	
+   336	
+   337	void cmd_help()
+   338	{
+   339	  printf("%%Q      : プログラムを終了\n");   
+   340	   
+   341	  printf("%%C      : CSVデータの登録件数などを表示 \n");
+   342	
+   343	  printf("%%P n    : CSVデータの先頭からn件表示 (n: 0 - 99 ... n = 0，
+n > 100:全件表示，n < 0:後ろから-n件表示)\n");
+   344	  printf("%%R file : fileから読み込み　\n");
+   345	        
+   346	  printf("%%W file : fileへ書き出し \n");
+   347	    
+   348	  printf("%%F word : wordを含むデータを検索\n"); 
+   349	        
+   350	  printf("%%S n    : データをn番目の項目で整列\n"); 
+   351	     
+   352	  printf("%%D n    : n番目のデータを削除 (n: 0 - 99 ... n=0:全件削除，n < 0，
+n > 100:警告文の表示)\n");
+   353	       
+   354	  printf("%%V word :  wordを含むデータを削除\n");
+   355	
+   356	  printf("%%B      :  データ群の形を1つ前の状態に戻す\n");
+   357	}
+   358	
+   359	
+   360	void cmd_back(){
+   361	  int i,s=profile_data_nitems;
+   362	  profile_data_nitems=number;
+   363	  for(i=0; i<=profile_data_nitems-1; i++){
+   364	    profile_data_store[i] = another[i];
+   365	  }
+   366	}
+   367	
+   368	
+   369	int check1(char *param){
+   370	if((*param>='a'&& *param<='z') || (*param>='A' && *param<='Z') || (*param>='0'
+ && *param<='9')) {
+   371	  return 1;
+   372	 }
+   373	}
+   374	
+   375	int check2(char *param){
+   376	if(*param>='0' && *param<='9') {
+   377	  return 1;
+   378	 }
+   379	}
+   380	
+   381	int check3(char *param){
+   382	  if((*param>='a'&& *param<='z') || (*param>='A' && *param<='Z')) {
+   383	    return 1;
+   384	  }
+   385	}
+   386	
+   387	void exec_command(char cmd, char *param)
+   388	{
+   389	  switch (cmd){
+   390	  case 'Q': 
+   391	    if(check1(param)==1) {
+   392	      printf("Don't write word\n");
+   393	      break;
+   394	    }else{ 
+   395	      cmd_quit(); 
+   396	      break;
+   397	    }
+   398	  case 'C': 
+   399	    if(check1(param)==1) {
+   400	      printf("Don't write word\n");
+   401	      break;
+   402	    }else{ 
+   403	      cmd_check(); 
+   404	      break;
+   405	    }
+   406	  case 'P': 
+   407	    if(check3(param)==1) {
+   408	      printf("Don't write word\n");
+   409	      break;
+   410	    }else{
+   411	      cmd_print(atoi(param));
+   412	      break;
+   413	    }
+   414	  case 'R': cmd_read(param);        break;
+   415	  case 'W': cmd_write(param);       break;
+   416	  case 'F': cmd_find(param);        break;
+   417	  case 'S': cmd_sort(atoi(param));  break;
+   418	  case 'D': 
+   419	    if(check3(param)==1) {
+   420	      printf("Don't write word\n"); 
+   421	      break;
+   422	    }else{
+   423	      cmd_delete(atoi(param));
+   424	      break;
+   425	    }
+   426	  case 'V': 
+   427	    cmd_vanish(param); 
+   428	      break;
+   429	     
+   430	   
+   431	        
+   432	     
+   433	   
+   434	  case 'H': 
+   435	    if(check1(param)==1) {
+   436	      printf("Don't write word\n");
+   437	      break;
+   438	    }else{ 
+   439	      cmd_help(); 
+   440	      break;
+   441	    }
+   442	  case 'B':
+   443	    if(check1(param)==1) {
+   444	      printf("Don't write word\n");
+   445	      break;
+   446	    }else{ 
+   447	      cmd_back(); 
+   448	      break;
+   449	    }
+   450	  default:
+   451	    fprintf(stderr, "Invalid command %c: ignored.\n", cmd);
+   452	    break;
+   453	  }
+   454	}
+   455	
+   456	void parse_line(char *line)
+   457	{
+   458	  if(line[0] == '%'){
+   459	    if(check1(&line[2])==1) {
+   460	      printf("Please space after %c%c\n",line[0],line[1]);
+   461	    }
+   462	    else {
+   463	      exec_command(line[1],&line[3]);
+   464	    }
+   465	  }
+   466	  else{
+   467	    new_profile(&profile_data_store[profile_data_nitems], line);
+   468	    profile_data_nitems++;
+   469	  }
+   470	}
+   471	
+   472	  int main()
+   473	  {
+   474	    char line[MAX_LINE_LEN+1]; 
+   475	    int i;
+   476	    while (get_line(stdin,line)) {
+   477	      parse_line(line);
+   478	    }
+   479	    return 0;
+   480	  }
+\end{verbatim}
+}
+\end{document}
