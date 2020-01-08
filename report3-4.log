@@ -1,4 +1,4 @@
-This is e-pTeX, Version 3.14159265-p3.8.1-180226-2.6 (utf8.euc) (TeX Live 2018) (preloaded format=platex 2019.2.22)  7 JAN 2020 19:25
+This is e-pTeX, Version 3.14159265-p3.8.1-180226-2.6 (utf8.euc) (TeX Live 2018) (preloaded format=platex 2019.2.22)  8 JAN 2020 13:31
 entering extended mode
  \write18 enabled.
  file:line:error style messages enabled.
@@ -120,107 +120,87 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 
 ]
 LaTeX Font Info:    Font shape `JT1/mc/bx/n' in size <12> not available
-(Font)              Font shape `JT1/gt/m/n' tried instead on input line 112.
+(Font)              Font shape `JT1/gt/m/n' tried instead on input line 115.
 LaTeX Font Info:    Font shape `JY1/mc/bx/n' in size <12> not available
-(Font)              Font shape `JY1/gt/m/n' tried instead on input line 112.
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 114.
+(Font)              Font shape `JY1/gt/m/n' tried instead on input line 115.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 117.
 
 
 (/opt/edu/texlive/2018/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 114.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 117.
 
-Overfull \hbox (7.12373pt too wide) in paragraph at lines 117--118
+Overfull \hbox (7.12373pt too wide) in paragraph at lines 120--121
 [][]\OT1/cmtt/m/n/10 socket \JY1/mc/m/n/10 関数でソケ ッ トを作成し ， \OT1/cmt
 t/m/n/10 connect \JY1/mc/m/n/10 関数を用いるために \OT1/cmtt/m/n/10 sockaddr_in
  \JY1/mc/m/n/10 構造体を \OT1/cmtt/m/n/10 sockaddr
  []
 
-[2] [3] [4] [5] [6] [7] [8] [9] [10]
-Overfull \hbox (481.72449pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 130     sprintf(print_buf,"ID    : %d\n""Name  : %s\n""B
-irth : %s\n""Addr  : %s\n""Com.  : %s\n", p->id, p->name, date_string(date, &p-
->birthday), p->home, p->comment);[] 
+[2]
+LaTeX Font Info:    Font shape `JT1/mc/bx/n' in size <10> not available
+(Font)              Font shape `JT1/gt/m/n' tried instead on input line 142.
+LaTeX Font Info:    Font shape `JY1/mc/bx/n' in size <10> not available
+(Font)              Font shape `JY1/gt/m/n' tried instead on input line 142.
+ [3] [4] [5] [6] [7] [8] [9] [10]
+Overfull \hbox (456.72446pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 130     sprintf(print_buf,"ID    : %d\n""Name  : %s\n""Bi
+rth : %s\n""Addr  : %s\n""Com.  : %s\n", p->id, p->name, date_string(date, &p->
+birthday), p->home, p->comment);[] 
  []
 
-[11]
-Overfull \hbox (124.7276pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 192   sprintf(buf,"%d,%s,%s,%s,%s",p->id,p->name,date_st
-ring(date,&p->birthday),p->home,p->comment);[] 
- []
-
-[12]
-Overfull \hbox (492.2244pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 225  if(strcmp(id, word) == 0||strcmp(p->name, word) == 
-0||strcmp(date_string(date, &p->birthday), word) == 0||strcmp(p->home, word) ==
- 0||strcmp(p->comment, word) == 0){[] 
- []
-
-[13]
-Overfull \hbox (24.97847pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 307   if(column != 1 && column != 2 && column != 3 && co
-lumn != 4 && column !=5){[] 
- []
-
-[14]
-Overfull \hbox (24.97847pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 311   if(column == 1 || column == 2 || column == 3 || co
-lumn == 4 || column ==5){[] 
- []
-
-[15]
-Overfull \hbox (0.90099pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 382             another[l] = profile_data_store[l];     
-        //\JY1/mc/m/n/10 コマンド \OT1/cmtt/m/n/10 D \JY1/mc/m/n/10 用
- []
-
-[16]
-Overfull \hbox (18.5765pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 408     char *str3  = "%%P n    : CSV \JY1/mc/m/n/10 デ 
-ータの先頭から \OT1/cmtt/m/n/10 n \JY1/mc/m/n/10 件表示 \OT1/cmtt/m/n/10 (n: 0 
-- 99 ... n = 0\JY1/mc/m/n/10 ，
+[11] [12]
+Overfull \hbox (99.72757pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 192   sprintf(buf,"%d,%s,%s,%s,%s",p->id,p->name,date_str
+ing(date,&p->birthday),p->home,p->comment);[] 
  []
 
 
-Overfull \hbox (135.22751pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 416     sprintf(help_buf,"%s%s%s%s%s%s%s%s%s%s\n",str1,s
-tr2,str3,str4,str5,str6,str7,str8,str9,str10);[] 
+Overfull \hbox (467.22437pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 225  if(strcmp(id, word) == 0||strcmp(p->name, word) == 0
+||strcmp(date_string(date, &p->birthday), word) == 0||strcmp(p->home, word) == 
+0||strcmp(p->comment, word) == 0){[] 
  []
 
-
-Overfull \hbox (129.97755pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 436 if((*param>='a'&& *param<='z') || (*param>='A' && *p
-aram<='Z') || (*param>='0' && *param<='9')) {[] 
+[13] [14] [15] [16]
+Overfull \hbox (110.22748pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 416     sprintf(help_buf,"%s%s%s%s%s%s%s%s%s%s\n",str1,st
+r2,str3,str4,str5,str6,str7,str8,str9,str10);[] 
  []
 
 [17]
-Overfull \hbox (40.72833pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 452         if((param[i]>='a'&& param[i]<='z') || (param
-[i]>='A' && param[i]<='Z')){[] 
+Overfull \hbox (104.97752pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 436 if((*param>='a'&& *param<='z') || (*param>='A' && *pa
+ram<='Z') || (*param>='0' && *param<='9')) {[] 
+ []
+
+
+Overfull \hbox (15.7283pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 452         if((param[i]>='a'&& param[i]<='z') || (param[
+i]>='A' && param[i]<='Z')){[] 
  []
 
 [18] [19]
-Overfull \hbox (45.97829pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 546         if(new_profile(&profile_data_store[profile_d
-ata_nitems], line,fd)==NULL){[] 
+Overfull \hbox (20.97826pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 546         if(new_profile(&profile_data_store[profile_da
+ta_nitems], line,fd)==NULL){[] 
  []
 
 [20]
-Overfull \hbox (77.47801pt too wide) in paragraph at lines 964--964
- []   \OT1/cmtt/m/n/10 592         if((new_sockfd = accept(sockfd,(struct socka
-ddr*)&write_sa,&write_len))== -1) {[] 
+Overfull \hbox (52.47798pt too wide) in paragraph at lines 954--954
+[]   \OT1/cmtt/m/n/10 592         if((new_sockfd = accept(sockfd,(struct sockad
+dr*)&write_sa,&write_len))== -1) {[] 
  []
 
 [21] [22] [23] [24] [25] [26] [27] (./report3-4.aux) ) 
 Here is how much of TeX's memory you used:
- 767 strings out of 494703
- 9446 string characters out of 6180181
- 85869 words of memory out of 5000000
- 4662 multiletter control sequences out of 15000+600000
- 13659 words of font info for 54 fonts, out of 8000000 for 9000
+ 773 strings out of 494703
+ 9545 string characters out of 6180181
+ 86543 words of memory out of 5000000
+ 4667 multiletter control sequences out of 15000+600000
+ 13967 words of font info for 55 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 25i,9n,20p,493b,389s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 25i,9n,20p,625b,318s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on report3-4.dvi (27 pages, 56452 bytes).
+Output written on report3-4.dvi (27 pages, 60136 bytes).
