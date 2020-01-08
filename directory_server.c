@@ -603,7 +603,6 @@ int main (){
                 close(new_sockfd);
                 break;
             }
-
             parse_line(recv_buf,new_sockfd);  
         }
      }

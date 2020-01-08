@@ -113,6 +113,7 @@ void cmd_read(char *filename){
         send(sockfd,read_buf,MAX_LINE_LEN,0);
         recv(sockfd,recv_buf,MAX_LINE_LEN,0);
         memset(read_buf,0,MAX_LINE_LEN);
+        memset(recv_buf,0,MAX_LINE_LEN);
     }
    
     fclose(fp);
